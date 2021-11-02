@@ -36,13 +36,12 @@ class Grammar extends BaseGrammar
     {
         list($result, $keyValue) = $this->processKeyValue($query, $values);
         $params = [
-            'index'=> $query->getConnection()->getDatabaseName(),
-            'type'=> $query->from,
-            'body'=> $values
-            // 'id' => $docId
+            'index'=> $query->from,
+            'type'=> '_doc',
+            'body'=> $values,
         ];
         if ($result) {
-            $params['id'] = $keyValue;
+            $params['_id'] = $keyValue;
         }
         return $params;
     }
@@ -65,8 +64,8 @@ class Grammar extends BaseGrammar
         $query->columns = $original;
 
         $searchs = [
-            'index' => $query->getConnection()->getDatabaseName(),
-            'type' => $query->from,
+            'index' => $query->from,
+            'type' => '_doc',
             'body' => $sqls
         ];
         return $searchs;
@@ -150,6 +149,9 @@ class Grammar extends BaseGrammar
                         break;
                     case 'or_notnull':
                         $conditions['must_not'][] = $expressions;
+                        break;
+                    case 'and_inlike':
+                        $conditions['must'][] = $expressions;
                         break;
                     default:
                         $this->notSupport($method);
@@ -303,6 +305,36 @@ class Grammar extends BaseGrammar
      * @param  array  $where
      * @return string
      */
+    protected function whereInLike(Builder $query, $where)
+    {
+        if (empty($where['values'])) {
+            return false;
+        }
+        $column = $this->removeTableFromColumn($query, $where['column']);
+        $should = [];
+        foreach($where['values'] as $value) {
+            $should[] = ['match' => [
+                $column => [
+                        "query" => $value,
+                        "fuzziness" => "AUTO"
+                    ]
+                ]
+            ];
+        }
+        return [
+            "bool" => [
+                "should" => $should
+            ]
+        ];
+    }
+
+    /**
+     * Compile a "where in" clause.
+     *
+     * @param  \Illuminate\Database\Query\Builder  $query
+     * @param  array  $where
+     * @return string
+     */
     protected function whereIn(Builder $query, $where)
     {
         if (empty($where['values'])) {
@@ -311,7 +343,7 @@ class Grammar extends BaseGrammar
         $column = $this->removeTableFromColumn($query, $where['column']);
         return [
             "terms" => [
-              $column => $where['values']
+                $column => $where['values']
             ]
         ];
     }
@@ -418,8 +450,10 @@ class Grammar extends BaseGrammar
         'min'=>'min',
         'avg'=>'avg',
         'sum'=>'sum',
-        'stats'=>'stats'
+        'stats'=>'stats',
+        'aggs' => 'aggs'
     ];
+
     /**
      * Compile an aggregated select clause.
      *
@@ -429,18 +463,22 @@ class Grammar extends BaseGrammar
      */
     protected function compileAggregate(Builder $query, $aggregate)
     {
-        // return [
-        //     "eloquent_aggregate" => [
-        //         $this->aggregateMapping[$aggregate['function']] => [ "field" => $aggregate['columns']] 
-        //     ]
-        // ];
-        $column = implode(',', $aggregate['columns']);
-        $column = ($column=='*') ? $query->keyname : $column;
-        return [
-            'aggregate' => [
-                $this->aggregateMapping[$aggregate['function']] => [ 'field' => $column] 
-            ]
-        ];
+        if ($aggregate['function'] === 'aggs') {
+            $items = [];
+            foreach($aggregate['columns'] as $column) {
+                $key = str_replace('.keyword', '', $column);
+                $items[$key] = ["terms" => ["field" => $column]];
+            }
+            return $items;
+        } else {
+            $column = implode(',', $aggregate['columns']);
+            $column = ($column=='*') ? $query->keyname : $column;
+            return [
+                'aggregate' => [
+                    $this->aggregateMapping[$aggregate['function']] => [ 'field' => $column] 
+                ]
+            ];
+        }
     }
 
     /**
@@ -452,14 +490,15 @@ class Grammar extends BaseGrammar
      */
     public function compileUpdate(Builder $query, $values)
     {
-        $sql = [
-            'index'=> $query->getConnection()->getDatabaseName(),
-            'type'=> $query->from,
-            'body'=> ['doc'=>$values]
-            // 'id' => $docId
+        // $values[$query->keyname] = $query->keyValue;
+        $params = [
+            'index'=> $query->from,
+            'type'=> '_doc',
+            'body'=> ['doc' => $values],
         ];
+        $params['id'] = $query->keyValue;
 
-        return json_encode($params);
+        return $params;
     }
 
      /**

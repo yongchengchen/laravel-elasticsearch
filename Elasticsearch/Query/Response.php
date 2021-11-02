@@ -46,7 +46,7 @@ class Response
      */
     public function getTotal()
     {
-        return $this->total;
+        return $this->total['value'] ?? 0;
     }
 
     /**
@@ -59,5 +59,16 @@ class Response
 
     public function getAggregations() {
         return Arr::get($this->rsp, 'aggregations', ['aggregate'=>['value'=>'0']]);
+    }
+
+    public function getFieldsAggregations() {
+        if ($aggregations = Arr::get($this->rsp, 'aggregations')) {
+            $results = [];
+            foreach($aggregations ?? [] as $key => $data) {
+                $results[$key] = $data['buckets'];
+            }
+            return $results;
+        }
+        return $this->rsp;
     }
 }

@@ -14,13 +14,12 @@ use Illuminate\Support\Traits\Macroable;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Query\Grammars\Grammar;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Query\Processors\Processor;
-use Illuminate\Database\Query\Builder;
 
-class Builder extends Builder
+class Builder extends \Illuminate\Database\Query\Builder
 {
     public $keyname;
+    public $keyValue;
 
     /**
      * Set the table which the query is targeting.
@@ -35,6 +34,7 @@ class Builder extends Builder
 
         return $this;
     }
+
 
     private function notSupport($keyword) {
         throw new RuntimeException(sprintf('keyword "%s" is not supported by Elasticsearch', $keyword));
@@ -81,7 +81,7 @@ class Builder extends Builder
 
 
     /**
-     * Retrieve the "count" result of the query.
+     * Retrieves the "count" result of the query.
      *
      * @param  string  $columns
      * @return int
@@ -95,6 +95,17 @@ class Builder extends Builder
         return $this->aggregate(__FUNCTION__, $columns); 
     }
 
+
+    public function aggs($columns = false) {
+        if ($columns) {
+            $function = 'aggs';
+            if (! is_array($columns)) {
+                $columns = [$columns];
+            }
+            $this->aggregate = compact('function', 'columns');
+        }
+        return $this;
+    }
 
     /**
      * Add a "where mulit match" clause to the query.
@@ -116,6 +127,15 @@ class Builder extends Builder
         }
         $this->wheres[] = compact('type', 'columns', 'operator', 'op_param', 'value', 'boolean');
         $this->addBinding($value, 'where');
+        return $this;
+    }
+
+    public function whereMultiOr(array $columns, $not = false)
+    {
+        // $type = $not ? 'NotNull' : 'Null';
+        $type = "MultiOr";
+
+        $this->wheres[] = compact('type', 'columns');
         return $this;
     }
 
@@ -203,6 +223,47 @@ class Builder extends Builder
         $this->wheres[] = compact('type', 'column', 'boolean');
 
         return $this;
+    }
+
+    /**
+     * Add a "where in" clause to the query.
+     *
+     * @param  string  $column
+     * @param  mixed   $values
+     * @param  string  $boolean
+     * @param  bool    $not
+     * @return $this
+     */
+    public function whereInLike($column, $values, $boolean = 'and', $not = false)
+    {
+        $type = 'InLike';
+
+        $this->wheres[] = compact('type', 'column', 'values', 'boolean');
+
+        foreach ($values as $value) {
+            if (! $value instanceof Expression) {
+                $this->addBinding($value, 'where');
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Execute the query as a "select" statement.
+     *
+     * @param  array  $columns
+     * @return \Illuminate\Support\Collection
+     */
+    public function get($columns = ['*'])
+    {
+        return collect($this->onceWithColumns($columns, function () {
+            return $this->processor->processSelect($this, $this->runSelect());
+        }));
+    }
+
+    public function getElsResponse() {
+        return $this->processor->getResponse();
     }
 }
 

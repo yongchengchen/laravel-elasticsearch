@@ -59,8 +59,7 @@ class Connection extends BaseConnection
      */
     protected function getDefaultSchemaGrammar()
     {
-
-        return $this->withTablePrefix(new SchemaGrammar);
+        return $this->withTablePrefix(new Schema\Grammar);
     }
 
     /**
@@ -74,13 +73,13 @@ class Connection extends BaseConnection
     }
 
     /**
-     * Get the Doctrine DBAL driver.
+     * Get a schema builder instance for the connection.
      *
-     * @return \Doctrine\DBAL\Driver\PDOSqlite\Driver
+     * @return \Illuminate\Database\Schema\Builder
      */
-    protected function getDoctrineDriver()
+    public function getSchemaBuilder()
     {
-        return new DoctrineDriver;
+        return new Schema\Builder($this);
     }
 
     /**
@@ -88,7 +87,7 @@ class Connection extends BaseConnection
      *
      * @return elasticsearch_client
      */
-    protected function connect()
+    public function elsAdapter()
     {
         if (is_null($this->elasticsearch_client)) {
             $singleHandler = ClientBuilder::singleHandler();
@@ -129,7 +128,7 @@ class Connection extends BaseConnection
      * @param  array   $bindings
      * @return mixed
      */
-    public function selectOne($query, $bindings = []) {
+    public function selectOne($query, $bindings = [], $useReadPdo = true) {
         $query['size'] = 1;
         return $this->select($query, $bindings);
     }
@@ -142,7 +141,7 @@ class Connection extends BaseConnection
      * @return array
      */
     public function select($query, $bindings = [], $useReadPdo = true) {
-        return $this->connect()->search($query);
+        return $this->elsAdapter()->search($query);
     }
 
     /**
@@ -152,8 +151,9 @@ class Connection extends BaseConnection
      * @param  array   $data
      * @return bool
      */
-    public function insert($des, $data=[]) {
-        $result = $this->connect()->index($data);
+    public function insert($index_data, $data=[]) {
+        $index_data['type'] = '_doc';
+        $result = $this->elsAdapter()->index($index_data);
         if (isset($result['result']) && in_array($result['result'], ['updated', 'created'])) {
             $this->_lastInsertId = $result['_id'];
             return true;
@@ -173,14 +173,8 @@ class Connection extends BaseConnection
      * @param  array   $data
      * @return int
      */
-    public function update($des, $data = []) {
-        // $data = [
-        //     'index'=> $this->indicesName,
-        //     'type'=> $type,
-        //     'body'=> ['doc'=>$data],
-        //     'id' => $docId
-        // ]
-        return $this->connect()->update($data);
+    public function update($index_data, $data = []) {
+        return $this->elsAdapter()->update($index_data);
     }
 
     /**
@@ -191,12 +185,7 @@ class Connection extends BaseConnection
      * @return int
      */
     public function delete($des, $data = []) {
-        // $data = [
-        //     'index'=> $this->indicesName,
-        //     'type'=> $type,
-        //     'id' => $docId
-        // ];
-        return $this->connect()->delete($data);
+        return $this->elsAdapter()->delete($data);
     }
 
     /**
@@ -276,7 +265,7 @@ class Connection extends BaseConnection
      *
      * @return void
      */
-    public function rollBack() {
+    public function rollBack($toLevel = NULL) {
         $this->notSupport('rollBack');
     }
 
@@ -297,5 +286,15 @@ class Connection extends BaseConnection
      */
     public function pretend(Closure $callback) {
         $this->notSupport('pretend');
+    }
+
+    /**
+     * Get the query grammar used by the connection.
+     *
+     * @return \Illuminate\Database\Query\Grammars\Grammar
+     */
+    public function getQueryGrammar()
+    {
+        return $this->queryGrammar;
     }
 }

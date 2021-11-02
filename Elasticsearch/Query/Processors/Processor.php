@@ -9,18 +9,22 @@ use Illuminate\Database\Query\Processors\Processor as BaseProcessor;
 
 class Processor extends BaseProcessor
 {
+    protected $response;
+    public function getResponse() {
+        return $this->response;
+    }
     /**
      * Process an "insert get ID" query.
      *
      * @param  \Illuminate\Database\Query\Builder  $query
-     * @param  string  $sql
+     * @param  array   $index_array
      * @param  array   $values
      * @param  string  $sequence
      * @return int
      */
-    public function processInsertGetId(Builder $query, $sql, $values, $sequence = null)
+    public function processInsertGetId(Builder $query, $index_data, $values, $sequence = null)
     {
-        $result = $query->getConnection()->insert($sql, $values);
+        $result = $query->getConnection()->insert($index_data, $values);
         $id = $query->getConnection()->lastInsertId($sequence);
 
         return is_numeric($id) ? (int) $id : $id;
@@ -35,8 +39,8 @@ class Processor extends BaseProcessor
      */
     public function processSelect(Builder $query, $values)
     {
-        $rsp = new Response($values);
-        return $rsp->getHits();
+        $this->response = new Response($values);
+        return $this->response->getHits();
     }
 
     /**
@@ -48,8 +52,8 @@ class Processor extends BaseProcessor
      */
     public function processSelectAggregate(Builder $query, $values)
     {
-        $rsp = new Response($values);
-        return $rsp->getAggregations();
+        $this->response = new Response($values);
+        return $this->response->getAggregations();
     }
 
     /**
