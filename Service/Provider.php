@@ -4,7 +4,8 @@ namespace Yong\ElasticSuit\Service;
 
 use Illuminate\Support\ServiceProvider;
 use Yong\ElasticSuit\Elasticsearch\Connection;
-use DB;
+use Yong\ElasticSuit\Console\Commands\SyncModelData;
+use Yong\ElasticSuit\Console\Commands\CreateModelIndex;
 
 class Provider extends ServiceProvider
 {
@@ -16,8 +17,13 @@ class Provider extends ServiceProvider
     public function register()
     {
         $this->app['db']->extend('elasticsearch', function($config, $name) {
+            $config['name'] = $name;
             return new Connection($config['database'], $config['prefix'], $config);
         });
-    }
 
+        if ($this->app->runningInConsole()) {
+            SyncModelData::register($this, $this->app);
+            CreateModelIndex::register($this, $this->app);
+        }
+    }
 }

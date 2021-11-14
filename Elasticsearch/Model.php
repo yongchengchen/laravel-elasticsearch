@@ -2,8 +2,10 @@
 
 namespace Yong\ElasticSuit\Elasticsearch;
 
+use Illuminate\Support\Facades\Schema;
 use Yong\ElasticSuit\Elasticsearch\Query\Builder;
 use Yong\ElasticSuit\Elasticsearch\Query\EloquentBuilder;
+use Doctrine\DBAL\DBALException;
 
 class Model extends \Illuminate\Database\Eloquent\Model
 {
@@ -12,8 +14,51 @@ class Model extends \Illuminate\Database\Eloquent\Model
 
     protected static $ORMModel;
 
+    public static $elsIndexName;
+
     public static function getORMModel() {
         return static::$ORMModel;
+    }
+
+    public static function ormRelations() {
+        return null;
+    }
+
+    public function orm2ElsData($ormItem) {
+        return $ormItem->toArray();
+    }
+
+    public function getTable() {
+        if (static::$elsIndexName) {
+            return static::$elsIndexName;
+        }
+        if ($this->table) {
+            return $this->table;
+        }
+        if ($ormClass = static::$ORMModel) {
+            return with(new $ormClass)->getTable();
+        }
+        return parent::getTable();
+    }
+    
+    public function getColumns() {
+        $columns = [];
+        if ($ormClass = static::$ORMModel) {
+            $ormItem = new $ormClass;
+            $tableName = $ormItem->getTable();
+            $schemaBuilder = Schema::connection($ormItem->getConnectionName());
+            $columnNames = $schemaBuilder->getColumnListing($tableName);
+            $columns = [];
+            foreach($columnNames as $name) {
+                try {
+                    $type = $schemaBuilder->getColumnType($tableName, $name);
+                } catch (DBALException $e) {
+                    $type = 'string';
+                }
+                $columns[] = compact('name', 'type');
+            }
+        }
+        return collect($columns);
     }
 
     /**

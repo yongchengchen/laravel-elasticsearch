@@ -33,6 +33,13 @@ class LengthAwarePaginator extends BaseLengthAwarePaginator {
         $this->_extData[$key] = $value;
     }
 
+    public function getExtraData($key = null) {
+        if ($key) {
+            return isset($this->_extData[$key]) ? $this->_extData[$key] : null;
+        }
+        return $this->_extData;
+    }
+
     public function toArray()
     {
         return array_merge($this->_extData, parent::toArray());

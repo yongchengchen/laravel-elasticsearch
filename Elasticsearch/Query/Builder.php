@@ -2,19 +2,7 @@
 
 namespace Yong\ElasticSuit\Elasticsearch\Query;
 
-use Closure;
 use RuntimeException;
-use BadMethodCallException;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
-use InvalidArgumentException;
-use Illuminate\Support\Collection;
-use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Traits\Macroable;
-use Illuminate\Contracts\Support\Arrayable;
-use Illuminate\Database\ConnectionInterface;
-use Illuminate\Database\Query\Grammars\Grammar;
-use Illuminate\Database\Query\Processors\Processor;
 
 class Builder extends \Illuminate\Database\Query\Builder
 {
@@ -127,6 +115,13 @@ class Builder extends \Illuminate\Database\Query\Builder
         }
         $this->wheres[] = compact('type', 'columns', 'operator', 'op_param', 'value', 'boolean');
         $this->addBinding($value, 'where');
+        return $this;
+    }
+
+    public function whereBoolean($column, $flag = true, $boolean = 'and') 
+    {
+        $type = 'Boolean';
+        $this->wheres[] = compact('type', 'column', 'flag', 'boolean');
         return $this;
     }
 

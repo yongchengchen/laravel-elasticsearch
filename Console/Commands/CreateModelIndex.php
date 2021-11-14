@@ -12,18 +12,19 @@ namespace Yong\ElasticSuit\Console\Commands;
 use Illuminate\Console\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Yong\ElasticSuit\Processor\EsModelSyncProcessor;
+use Yong\ElasticSuit\Processor\ORM2ELSIndexMappingProcessor;
+use Yong\ElasticSuit\Elasticsearch\InterfaceComplexIndexer;
 
-class SyncModel extends Command
+class CreateModelIndex extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'els:sync {model : Elasticsearch Model}';
+    protected $signature = 'els:create-index {model : Elasticsearch Model} {index : Index name}';
 
-    protected $description = "sync mysql model to elasticsearch model";
+    protected $description = "create elasticsearch index from a model";
 
     public static function register($serviceProvider, &$appContainer) {
         $class = static::class;
@@ -37,7 +38,16 @@ class SyncModel extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $model = $this->argument('model');
-        with(new EsModelSyncProcessor($model, $output))->sync();
+        if (!((new $model) instanceof InterfaceComplexIndexer)) {
+            $output->writeln("<error>model must be instance of InterfaceComplexIndexer</error>");
+            return;
+        }
+
+        $indexName = $this->argument('index');
+        if ($indexName == 'default') {
+            $indexName = '';
+        }
+        with(new ORM2ELSIndexMappingProcessor($model, $indexName, $output))->createIndex();
         return 0;
     }
 }

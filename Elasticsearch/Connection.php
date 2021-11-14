@@ -4,14 +4,12 @@ namespace Yong\ElasticSuit\Elasticsearch;
 
 
 use Closure;
-use Config;
-use Illuminate\Support\Arr;
 use Elasticsearch\ClientBuilder;
 use Illuminate\Database\Connection as BaseConnection;
+use Illuminate\Database\Events\QueryExecuted;
 
 use Yong\ElasticSuit\Elasticsearch\Query\Grammar\Grammar;
 use Yong\ElasticSuit\Elasticsearch\Query\Processors\Processor;
-
 
 /**
  * Relational DB -> Databases -> Tables -> Rows -> Columns
@@ -39,7 +37,7 @@ class Connection extends BaseConnection
     }
 
     private function notSupport($keyword) {
-        throw new RuntimeException(sprintf(' "%s" is not supported by Elasticsearch Connection', $keyword));
+        throw new \RuntimeException(sprintf(' "%s" is not supported by Elasticsearch Connection', $keyword));
     }
 
     /**
@@ -91,10 +89,13 @@ class Connection extends BaseConnection
     {
         if (is_null($this->elasticsearch_client)) {
             $singleHandler = ClientBuilder::singleHandler();
-            $this->elasticsearch_client  = ClientBuilder::create()
+            $clientBuilder = ClientBuilder::create()
                 ->setHosts($this->getConfig('hosts'))
-                ->setHandler($singleHandler)
-                ->build();
+                ->setHandler($singleHandler);
+            if ($username = $this->getConfig('username')) {
+                $clientBuilder->setBasicAuthentication($username, $this->getConfig('password'));
+            }
+            $this->elasticsearch_client  = $clientBuilder->build();
         }
         return $this->elasticsearch_client;
     }
@@ -141,7 +142,10 @@ class Connection extends BaseConnection
      * @return array
      */
     public function select($query, $bindings = [], $useReadPdo = true) {
-        return $this->elsAdapter()->search($query);
+        $start = microtime(true);
+        $results = $this->elsAdapter()->search($query);
+        $this->logQuery(json_encode($query), [], $this->getElapsedTime($start));
+        return $results;
     }
 
     /**
@@ -227,7 +231,7 @@ class Connection extends BaseConnection
      * @return array
      */
     public function prepareBindings(array $bindings) {
-        $this->notSupport('prepareBindings');
+        return $bindings;
     }
 
     /**

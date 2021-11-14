@@ -65,7 +65,7 @@ class Grammar extends BaseGrammar
 
         $searchs = [
             'index' => $query->from,
-            'type' => '_doc',
+            // 'type' => '_doc',
             'body' => $sqls
         ];
         return $searchs;
@@ -153,6 +153,12 @@ class Grammar extends BaseGrammar
                     case 'and_inlike':
                         $conditions['must'][] = $expressions;
                         break;
+                    case 'and_boolean':
+                        $conditions['must'][] = $expressions;
+                        break;
+                    case 'or_boolean':
+                        $conditions['should'][] = $expressions;
+                        break;
                     default:
                         $this->notSupport($method);
                         break;
@@ -210,6 +216,14 @@ class Grammar extends BaseGrammar
                 'query' => $where['value'],
                 $where['operator'] => $where['op_param'],
                 'fields' => $where['columns']
+            ]
+        ];
+    }
+
+    protected function whereBoolean(Builder $query, $where) {
+        return [
+            'term' => [
+                $where['column'] => $where['flag']
             ]
         ];
     }
@@ -289,7 +303,6 @@ class Grammar extends BaseGrammar
                     ]
                 ];
                 break;
-
             default:
                 $this->notSupport('where operator ' . $where['operator']);
                 break;
@@ -514,6 +527,12 @@ class Grammar extends BaseGrammar
         foreach($orders as $order) {
             $sorts[] = [$order['column'] => $order['direction']];
         }
+
+        // $sorts[] = [$order['column'] =>[
+        //     'order' => $order['direction'],
+        //     'missing' => '_last',
+        //     // 'ignore_unmapped' => true
+        // ]];
         return $sorts;
     }
   
