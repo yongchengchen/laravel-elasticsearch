@@ -70,8 +70,31 @@ class Builder extends \Illuminate\Database\Schema\Builder
                 break;
             case 'object':
             case 'json':
-                $mapping = ['type' => 'object'];
+                $body = [];
+                foreach($define['properties'] ?? [] as $column) {
+                    $configs = is_object($column) ? $column->toArray() : $column;
+                    $body[$configs['name']] =  $this->prepareFiledMapping($configs);
+                }
+                if (count($body)) {
+                    $mapping['properties'] = $body;
+                } else {
+                    $mapping = ['type' => 'object'];
+                }
                 break;
+            case 'array':
+                $mapping = ['type' => 'text'];
+
+                    // $body = [];
+                    // foreach($define['properties'] ?? [] as $column) {
+                    //     $configs = is_object($column) ? $column->toArray() : $column;
+                    //     $body[$configs['name']] =  $this->prepareFiledMapping($configs);
+                    // }
+                    // if (count($body)) {
+                    //     $mapping['properties'] = $body;
+                    // } else {
+                    //     $mapping = ['type' => 'object'];
+                    // }
+                    break;
             case 'suggest':
                 $mapping = ['type' => 'completion'];
                 break;

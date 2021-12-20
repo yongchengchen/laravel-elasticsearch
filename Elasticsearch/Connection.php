@@ -143,8 +143,20 @@ class Connection extends BaseConnection
      */
     public function select($query, $bindings = [], $useReadPdo = true) {
         $start = microtime(true);
-        $results = $this->elsAdapter()->search($query);
+        try {
+            $results = $this->elsAdapter()->search($query);
+        } catch(\Exception $e) {
+            $results = [];
+        }
         $this->logQuery(json_encode($query), [], $this->getElapsedTime($start));
+        return $results;
+    }
+
+    public function mselect($queries, $bindings = [], $useReadPdo = true) {
+        $start = microtime(true);
+        $queries = ['body' => $queries];
+        $results = $this->elsAdapter()->msearch($queries);
+        $this->logQuery(json_encode($queries), [], $this->getElapsedTime($start));
         return $results;
     }
 

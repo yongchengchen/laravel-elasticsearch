@@ -121,7 +121,7 @@ class Grammar extends BaseGrammar
             }
 
             if (!empty($expressions) && is_array($expressions) && count($expressions)>0) {
-                switch(strtolower(implode('_', [$where['boolean'], $where['type']]))) {
+                switch($condition = strtolower(implode('_', [$where['boolean'], $where['type']]))) {
                     case 'and_basic':
                         $conditions[$must_not ? 'must_not' : 'must'][] = $expressions;
                         break;
@@ -153,20 +153,27 @@ class Grammar extends BaseGrammar
                     case 'and_inlike':
                         $conditions['must'][] = $expressions;
                         break;
+                    case 'or_in':
+                        $conditions['should'][] = $expressions;
+                        break;
                     case 'and_boolean':
                         $conditions['must'][] = $expressions;
                         break;
                     case 'or_boolean':
                         $conditions['should'][] = $expressions;
                         break;
+                    case 'and_nested':
+                        $conditions['must'][] = $expressions;
+                        break;
                     default:
+                    // dd($condition, $method, $expressions);
                         $this->notSupport($method);
                         break;
                 }
             }
         }
 
-        if (count($conditions['must']) > 0 || count($conditions['must_not'] > 0) || count($conditions['should']) > 0) {
+        if (count($conditions['must']) > 0 || count($conditions['must_not']) > 0 || count($conditions['should']) > 0) {
             if (count($conditions['must']) == 1) {
                 $conditions['must'] = $conditions['must'][0];
             }
@@ -188,18 +195,24 @@ class Grammar extends BaseGrammar
             return $column;
         }
 
-        list($table, $column) = explode('.', $column);
-        if ($table !== $query->from) {
-            $this->notSupport('Join table search');
+        list($table, $onlyColumn) = explode('.', $column, 2);
+        if ($table === 'x') {
+            return $column;
         }
+        if ($table === $query->from) {
+            return $onlyColumn;
+        }
+        // if ($table !== $query->from) {
+        //     $this->notSupport('Join table search');
+        // }
         return $column;
     }
 
     protected function whereNested(Builder $query, $where)
     {
         $nested = $where['query'];
-        $this->compileWheres($nested);
-        return $this;
+        return $this->compileWheres($nested);
+        // return $this;
     }
 
     /**
@@ -356,7 +369,7 @@ class Grammar extends BaseGrammar
         $column = $this->removeTableFromColumn($query, $where['column']);
         return [
             "terms" => [
-                $column => $where['values']
+                $column => array_values($where['values'])
             ]
         ];
     }
