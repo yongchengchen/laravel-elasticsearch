@@ -19,8 +19,13 @@ class Blueprint extends \Illuminate\Database\Schema\Blueprint {
         return $this->addColumn('suggest', $column, compact('suggestType'));
     }
 
-    public function json($column)
+    public function object($column, $properties = [])
     {
-        return $this->addColumn('object', $column);
+        return $this->addColumn('object', $column, compact('properties'));
+    }
+
+    public function array($column, $properties = [])
+    {
+        return $this->addColumn('array', $column, compact('properties'));
     }
 }

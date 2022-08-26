@@ -2,12 +2,16 @@
 
 namespace Yong\ElasticSuit\Elasticsearch;
 
+use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Eloquent\Builder as BaseBuilder;
 use Yong\ElasticSuit\Elasticsearch\Query\Builder;
 use Yong\ElasticSuit\Elasticsearch\Query\EloquentBuilder;
 use Doctrine\DBAL\DBALException;
+use Illuminate\Database\Eloquent\Model as BaseModel;
 
-class Model extends \Illuminate\Database\Eloquent\Model
+class Model extends BaseModel
 {
     protected $connection = 'elasticsearch';
     protected $primaryKey = '_id';
@@ -16,8 +20,23 @@ class Model extends \Illuminate\Database\Eloquent\Model
 
     public static $elsIndexName;
 
+    public function attrFromX($key, $default = null) {
+        if ($this->x) {
+            return Arr::get($this->x, $key, $default);
+        }
+        return $default;
+    }
+
+    public static function extendIndexingQueryChunk($query, $chunkSize, \Closure $callback) {
+        return $query->chunk($chunkSize, $callback);
+    }
+    
     public static function getORMModel() {
         return static::$ORMModel;
+    }
+
+    public function get2ndKeyName() {
+        return null;
     }
 
     public static function ormRelations() {
@@ -119,5 +138,23 @@ class Model extends \Illuminate\Database\Eloquent\Model
         $baseQuery = $query->getQuery();
         $baseQuery->keyValue = $this->getKeyForSaveQuery();
         return $query;
+    }
+
+    public function getAttribute($key)
+    {
+        if (Str::contains($key, '.')) {
+            return Arr::get($this->attributes, $key);
+        }
+        return parent::getAttribute($key);
+    }
+
+    protected function newHasOne(BaseBuilder $query, BaseModel $parent, $foreignKey, $localKey)
+    {
+        return new Relations\HasOne($query, $parent, $foreignKey, $localKey);
+    }
+
+    protected function newHasMany(BaseBuilder $query, BaseModel $parent, $foreignKey, $localKey)
+    {
+        return new Relations\HasMany($query, $parent, $foreignKey, $localKey);
     }
 }

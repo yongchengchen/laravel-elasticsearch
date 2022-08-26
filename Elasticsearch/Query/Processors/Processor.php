@@ -56,6 +56,15 @@ class Processor extends BaseProcessor
         return $this->response->getAggregations();
     }
 
+    public function processMSelect(Builder $query, $values)
+    {
+        $responses = [];
+        foreach($values['responses'] ?? [] as $value) {
+            $responses[] = new Response($value);
+        }
+        return $responses;
+    }
+
     /**
      * Process the results of a column listing query.
      *

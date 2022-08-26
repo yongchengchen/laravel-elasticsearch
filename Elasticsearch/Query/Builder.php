@@ -257,6 +257,24 @@ class Builder extends \Illuminate\Database\Query\Builder
         }));
     }
 
+    public function mget($builders = [], $columns = ['*'])
+    {
+        $queries = [];
+        foreach($builders as $builder) {
+            $item = $builder->toSql();
+            $queries[] = ['index' => $item['index']];
+            $queries[] = $item['body'];
+        }
+        return $this->processor->processMSelect($this, $this->runMSelect($queries));
+    }
+
+    protected function runMSelect($queries)
+    {
+        return $this->connection->mselect(
+            $queries, $this->getBindings(), ! $this->useWritePdo
+        );
+    }
+
     public function getElsResponse() {
         return $this->processor->getResponse();
     }
