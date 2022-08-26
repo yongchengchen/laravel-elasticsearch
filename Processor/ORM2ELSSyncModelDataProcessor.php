@@ -3,7 +3,6 @@
 namespace Yong\ElasticSuit\Processor;
 
 use Symfony\Component\Console\Output\OutputInterface;
-use Yong\ElasticSuit\Elasticsearch\InterfaceComplexIndexer;
 
 class ORM2ELSSyncModelDataProcessor {
     protected $elasticModel;
