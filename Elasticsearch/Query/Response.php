@@ -20,16 +20,17 @@ class Response
         $hits = Arr::get($rsp, 'hits');
         $this->total = Arr::get($hits, 'total', 0);
         if ($this->total > 0) {
-            $this->hits = [];
-            $subhits =  Arr::get($hits, 'hits', []);
-            foreach($subhits as $record) {
-                $id = Arr::get($record,'_id', null);
-                $_source = Arr::get($record, '_source', []);
-                if (!is_null($id)) {
-                    $_source['_id'] = $id;
-                }
-                $this->hits[] = $_source;
-            }
+            // $this->hits = [];
+            // $subhits =  Arr::get($hits, 'hits', []);
+            // foreach($subhits as $record) {
+            //     $id = Arr::get($record,'_id', null);
+            //     $_source = Arr::get($record, '_source', []);
+            //     if (!is_null($id)) {
+            //         $_source['_id'] = $id;
+            //     }
+            //     $this->hits[] = $_source;
+            // }
+            $this->hits = Arr::get($hits, 'hits', []);
         }
     }
 

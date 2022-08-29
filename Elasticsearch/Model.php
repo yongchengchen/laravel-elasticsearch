@@ -157,4 +157,13 @@ class Model extends BaseModel
     {
         return new Relations\HasMany($query, $parent, $foreignKey, $localKey);
     }
+
+    public function newFromBuilder($attributes = [], $connection = null)
+    {
+        $realAttributes = $attributes['_source'] ?? [];
+        $realAttributes['_id'] = $attributes['_id'];
+        $model = parent::newFromBuilder($realAttributes, $connection);
+        $model->setTable($attributes['_index']);
+        return $model;
+    }
 }
