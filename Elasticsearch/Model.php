@@ -20,6 +20,47 @@ class Model extends BaseModel
 
     public static $elsIndexName;
 
+    protected $_encryptColumns;
+
+    protected $_performAction = false;
+
+    public function _encryptData($plaintext)
+    {
+        if ($plaintext = trim($plaintext)) {
+            $key = 'password';
+            $cipher = "AES-128-CBC";
+            $ivlen = openssl_cipher_iv_length($cipher);
+            $iv = openssl_random_pseudo_bytes($ivlen);
+            $iv = '1234567890123456';
+            $ciphertext_raw = openssl_encrypt($plaintext, $cipher, $key, $options=OPENSSL_RAW_DATA, $iv);
+            $hmac = hash_hmac('sha256', $ciphertext_raw, $key, $as_binary=true);
+            return base64_encode($hmac.$ciphertext_raw);
+        }
+        return '';
+    }
+
+    public function _decryptData($ciphertext)
+    {
+        if (empty($ciphertext)) {
+            return '';
+        }
+        $key = 'password';
+        $cipher = "AES-128-CBC";
+
+        $c = base64_decode($ciphertext);
+        $ivlen = 0;
+        $iv = '1234567890123456';
+        $hmac = substr($c, $ivlen, $sha2len=32);
+        $ciphertext_raw = substr($c, $ivlen+$sha2len);
+        $original_plaintext = openssl_decrypt($ciphertext_raw, $cipher, $key, $options=OPENSSL_RAW_DATA, $iv);
+        $calcmac = hash_hmac('sha256', $ciphertext_raw, $key, $as_binary=true);
+        if (hash_equals($hmac, $calcmac))// timing attack safe comparison
+        {
+            return $original_plaintext;
+        }
+        return $ciphertext;
+    }
+
     public function attrFromX($key, $default = null) {
         if ($this->x) {
             return Arr::get($this->x, $key, $default);
@@ -132,7 +173,7 @@ class Model extends BaseModel
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    protected function setKeysForSaveQuery(\Illuminate\Database\Eloquent\Builder $query)
+    protected function setKeysForSaveQuery($query)
     {
         parent::setKeysForSaveQuery($query);
         $baseQuery = $query->getQuery();
@@ -161,9 +202,49 @@ class Model extends BaseModel
     public function newFromBuilder($attributes = [], $connection = null)
     {
         $realAttributes = $attributes['_source'] ?? [];
+        foreach($this->_encryptColumns ?? [] as $k) {
+            if ($v = $realAttributes[$k]) {
+                $realAttributes[$k] = $this->_decryptData($v);
+            }
+        }
         $realAttributes['_id'] = $attributes['_id'];
         $model = parent::newFromBuilder($realAttributes, $connection);
         $model->setTable($attributes['_index']);
         return $model;
+    }
+
+    public function getAttributes()
+    {
+        $attributes = $this->attributes;
+        if ($this->_performAction && !empty($this->_encryptColumns)) {
+            foreach($this->_encryptColumns as $k) {
+                if ($v = $attributes[$k] ?? false) {
+                    $attributes[$k] = $this->_encryptData($v);
+                } 
+            }
+        }
+
+        return $attributes;
+    }
+
+    public function getDirty()
+    {
+        return $this->getAttributes();
+    }
+
+    protected function performInsert(BaseBuilder $query)
+    {
+        $this->_performAction = true;
+        $ret = parent::performInsert($query);
+        $this->_performAction = false;
+        return $ret;
+    }
+
+    protected function performUpdate(BaseBuilder $query)
+    {
+        $this->_performAction = true;
+        $ret = parent::performUpdate($query);
+        $this->_performAction = false;
+        return $ret;
     }
 }

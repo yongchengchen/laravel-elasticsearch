@@ -22,7 +22,7 @@ class SyncModelData extends Command
      *
      * @var string
      */
-    protected $signature = 'els:sync-data {model : Elasticsearch Model} {index : Index name} {--modelId=}';
+    protected $signature = 'els:sync-data {model : Elasticsearch Model} {index : Index name} {--modelId=} {--fromId=} {--toId=}';
 
     protected $description = "sync mysql model data to elasticsearch index";
 
@@ -48,7 +48,8 @@ class SyncModelData extends Command
             $indexName = '';
         }
 
-        with(new ORM2ELSSyncModelDataProcessor($model, $indexName, $output))->sync($this->option('modelId'));
+        with(new ORM2ELSSyncModelDataProcessor($model, $indexName, $output))
+            ->sync($this->option('modelId'), $this->option('fromId'), $this->option('toId'));
         return 0;
     }
 }

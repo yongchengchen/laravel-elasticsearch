@@ -14,7 +14,9 @@ class ORM2ELSIndexMappingProcessor {
 
     public function __construct($model, $indexName, OutputInterface $output)
     {
-        Type::addType('enum', EnumType::class);
+        if (!Type::hasType('enum')) {
+            Type::addType('enum', EnumType::class);
+        }
         $model::$elsIndexName = $indexName;
         $this->elsModel = $model;
         $this->output = $output;
@@ -28,7 +30,7 @@ class ORM2ELSIndexMappingProcessor {
         $columns = $elsItem->getColumns();
         $tableName = $elsItem->getTable();
         $elsBuilder = Schema::connection($elsItem->getConnectionName());
-        list ($success, $rets, $msg) = $elsBuilder->buildByColumns($tableName, $columns);
+        list ($success, $rets, $msg) = $elsBuilder->buildByColumns($tableName, is_array($columns) ? collect($columns) : $columns);
         if ($success) {
             $this->output->writeln(sprintf("<info>%s index mapping success.</info>", $msg));
         } else {

@@ -100,7 +100,7 @@ class Grammar extends BaseGrammar
         return false;
     }
 
-    protected function compileWheres(Builder $query)
+    public function compileWheres(Builder $query)
     {
         if (is_null($query->wheres)) {
             return false;

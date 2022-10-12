@@ -107,7 +107,7 @@ class Connection extends BaseConnection
      * @param  string  $table
      * @return \Yong\ElasticSuit\Elasticsearch\Query\Builder
      */
-    public function table($table) {
+    public function table($table, $as = NULL) {
         return $this->query()->from($table);
     }
 
@@ -190,7 +190,15 @@ class Connection extends BaseConnection
      * @return int
      */
     public function update($index_data, $data = []) {
-        return $this->elsAdapter()->update($index_data);
+        $index = $index_data['index'];
+        $type = $index_data['type'];
+        $id = $index_data['id'];
+        $this->elsAdapter()->delete(compact('index', 'type', 'id'));
+        unset($index_data['body']['doc']['_id']);
+        unset($index_data['id']);
+        $index_data['body'] = $index_data['body']['doc'];
+        return $this->insert($index_data);
+        // return $this->elsAdapter()->update($index_data);
     }
 
     /**

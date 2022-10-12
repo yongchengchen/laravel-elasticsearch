@@ -151,7 +151,7 @@ class Builder extends \Illuminate\Database\Schema\Builder
             $callback($blueprint);
         }
         $columns = $blueprint->getColumns();
-        return $this->buildByColumns($blueprint->getTable(), $columns);
+        return $this->buildByColumns($blueprint->getTable(), is_array($columns) ? collect($columns) : $columns);
     }
 
     /**

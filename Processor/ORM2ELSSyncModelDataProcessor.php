@@ -4,7 +4,8 @@ namespace Yong\ElasticSuit\Processor;
 
 use Symfony\Component\Console\Output\OutputInterface;
 
-class ORM2ELSSyncModelDataProcessor {
+class ORM2ELSSyncModelDataProcessor
+{
     protected $elasticModel;
     protected $output;
     protected $emptyElasticInstance;
@@ -16,7 +17,8 @@ class ORM2ELSSyncModelDataProcessor {
         $this->output = $output;
     }
 
-    public function sync($modelIdsString = null) {
+    public function sync($modelIdsString = null, $fromId = null, $toId = null)
+    {
         $elasticModel = $this->elasticModel;
         $ormModel = $elasticModel::getORMModel();
         $this->emptyElasticInstance = new $elasticModel;
@@ -34,12 +36,20 @@ class ORM2ELSSyncModelDataProcessor {
             $amount = count($modelIds);
             $builder->whereKey($modelIds);
         } else {
-            $amount = $ormModel::count();
+            $keyName = $builder->getModel()->getQualifiedKeyName();
+            $keyName = last(explode('.', $keyName));
+            if (!is_null($fromId)) {
+                $builder->where($keyName, '>=', $fromId);
+            }
+            if (!is_null($toId)) {
+                $builder->where($keyName, '<=', $toId);
+            }
+            $amount = (clone $builder)->count();
         }
         $this->output->progressStart($amount);
-        $elasticModel::extendIndexingQueryChunk($builder, 200, function($collection) use ($keyName) {
+        $elasticModel::extendIndexingQueryChunk($builder, 200, function ($collection) use ($keyName) {
             $keyValues = [];
-            foreach($collection as $item) {
+            foreach ($collection as $item) {
                 $keyValues[] = $this->sync_item($this->elasticModel, $item, $keyName);
                 $this->output->progressAdvance();
             }
@@ -48,7 +58,8 @@ class ORM2ELSSyncModelDataProcessor {
         $this->output->progressFinish();
     }
 
-    protected function sync_item($elasticModel, $ormItem, $keyName) {
+    protected function sync_item($elasticModel, $ormItem, $keyName)
+    {
         $keyName = empty($keyName) ? $ormItem->getKeyName() : $keyName;
 
         $ormData = $this->emptyElasticInstance->grabDataFromOrm($ormItem);
