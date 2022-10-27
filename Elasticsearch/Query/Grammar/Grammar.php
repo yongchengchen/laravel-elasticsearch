@@ -37,7 +37,7 @@ class Grammar extends BaseGrammar
         list($result, $keyValue) = $this->processKeyValue($query, $values);
         $params = [
             'index'=> $query->from,
-            'type'=> '_doc',
+            // 'type'=> '_doc',
             'body'=> $values,
         ];
         if ($result) {

@@ -168,7 +168,7 @@ class Connection extends BaseConnection
      * @return bool
      */
     public function insert($index_data, $data=[]) {
-        $index_data['type'] = '_doc';
+        // $index_data['type'] = '_doc';
         $result = $this->elsAdapter()->index($index_data);
         if (isset($result['result']) && in_array($result['result'], ['updated', 'created'])) {
             $this->_lastInsertId = $result['_id'];

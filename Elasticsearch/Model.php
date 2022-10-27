@@ -134,7 +134,7 @@ class Model extends BaseModel
     public function getSchema() {
         $params = [
             'index' => $this->getTable(),
-            'type' => '_doc'
+            // 'type' => '_doc'
         ];
 
         // Update the index mapping

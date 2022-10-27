@@ -232,7 +232,7 @@ class Builder extends \Illuminate\Database\Schema\Builder
             $this->connection->elsAdapter()->indices()->deleteMapping(
                 [
                     'index' => $table,
-                    'type' => '_doc'   
+                    // 'type' => '_doc'   
                 ]);
         }
     }
