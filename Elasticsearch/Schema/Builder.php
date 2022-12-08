@@ -154,6 +154,48 @@ class Builder extends \Illuminate\Database\Schema\Builder
         return $this->buildByColumns($blueprint->getTable(), is_array($columns) ? collect($columns) : $columns);
     }
 
+    public function buildTemplateByColumns($table, Collection $columns)
+    {
+        $body = [];
+        $doc = [];
+        foreach($columns as $column) {
+            $configs = is_object($column) ? $column->toArray() : $column;
+            $body[$configs['name']] =  $this->prepareFiledMapping($configs);
+        }
+        $doc['properties'] = $body;
+        try {
+            $indices = $this->connection->elsAdapter()->indices();
+            $body = [
+                "index_patterns" =>  [ $table . "-*"],
+                "priority"=> 1,
+                "version" => 1,
+                "template" => [
+
+                    'settings' => [
+                        'number_of_replicas' => 0,
+                        "number_of_shards" => 1,
+                    ],
+                    'mappings' => $doc
+                ]
+            ];
+            $indices->putIndexTemplate([
+                'name' => $table,
+                'body' => $body
+            ]);
+            return [true, $body, sprintf('Index template %s pattern %s-* has been created/updated.', $table, $table)];
+        } catch (\Elasticsearch\Common\Exceptions\BadRequest400Exception $e) {
+            $msg = json_decode($e->getMessage(), true);
+            if ($errType = $msg['error']['root_cause'][0]['type'] ?? false) {
+                if ($errType !== 'resource_already_exists_exception') {
+                    throw $e;
+                }
+
+                return [false, $msg, ''];
+            }
+        } 
+    }
+
+
     /**
      * @params Illuminate\Support\Collection $columns 
      * each column is an array with the following keys:
