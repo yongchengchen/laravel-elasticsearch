@@ -3,11 +3,14 @@
 namespace Yong\ElasticSuit\Elasticsearch\Query;
 
 use RuntimeException;
+use Inkstation\Base\Providers\Facades\Registry;
 
 class Builder extends \Illuminate\Database\Query\Builder
 {
     public $keyname;
     public $keyValue;
+
+    public $withHighLight = false;
 
     /**
      * Set the table which the query is targeting.
@@ -118,10 +121,44 @@ class Builder extends \Illuminate\Database\Query\Builder
         return $this;
     }
 
+    public function whereBooleanSub(array $columns, $operator='and', $boolean = 'and')
+    {
+        $subs = [];
+        $op = $operator;
+        $b = $boolean;
+        foreach($columns as $cond) {
+            [$type, $columns, $value, $operator, $boolean] = $cond;
+            $op_param = $operator;
+            $subs[] = compact('type', 'columns', 'operator', 'op_param', 'value', 'boolean');
+        }
+        $type = 'BooleanSub';
+        $operator = $op;
+        $boolean = $b;
+        $this->wheres[] = compact('type', 'subs', 'operator', 'boolean');
+        return $this;
+    }
+
+    public function whereWildcard($column, $value, $operator='and', $boolean = 'and') 
+    {
+        $type = 'wildcard';
+        $op_param = $operator;
+        $this->wheres[] = compact('type', 'column', 'operator', 'op_param', 'value', 'boolean');
+        $this->addBinding($value, 'where');
+        return $this;
+    }
+
     public function whereBoolean($column, $flag = true, $boolean = 'and') 
     {
         $type = 'Boolean';
         $this->wheres[] = compact('type', 'column', 'flag', 'boolean');
+        return $this;
+    }
+
+    public function whereMinScore($value)
+    {
+        $type = 'MinScore';
+        $boolean = 'and';
+        $this->wheres[] = compact('type', 'value', 'boolean');
         return $this;
     }
 
@@ -213,7 +250,7 @@ class Builder extends \Illuminate\Database\Query\Builder
      */
     public function whereNull($column, $boolean = 'and', $not = false)
     {
-        $type = $not ? 'NotNull' : 'Null';
+        $type = $not ? 'Null' : 'NotNull';
 
         $this->wheres[] = compact('type', 'column', 'boolean');
 
@@ -254,6 +291,34 @@ class Builder extends \Illuminate\Database\Query\Builder
     {
         return collect($this->onceWithColumns($columns, function () {
             return $this->processor->processSelect($this, $this->runSelect());
+        }));
+    }
+
+    public function toSql()
+    {
+        $data = parent::toSql();
+        $min_score = $data["body"]["query"]["min_score"] ?? 0;
+        unset($data["body"]["query"]["min_score"]);
+        if ($min_score) {
+            $data["body"]["min_score"] = $min_score;
+        }
+        if ($this->withHighLight) {
+            $data["body"]["highlight"] = [
+                "fields" => [
+                        "*" => [ "pre_tags" => ["<mark>"], "post_tags" => ["</mark>"] 
+                    ]
+                ]
+            ];
+        }
+      
+        Registry::put('_elastic_wheres_', $data);
+        return $data;
+    }
+
+    public function rawGet($columns = ['*'])
+    {
+        return collect($this->onceWithColumns($columns, function () {
+            return $this->runSelect();
         }));
     }
 

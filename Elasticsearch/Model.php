@@ -15,6 +15,8 @@ class Model extends BaseModel
 {
     protected $connection = 'elasticsearch';
     protected $primaryKey = '_id';
+    public $_score;
+    public $_highlight;
 
     protected static $ORMModel;
 
@@ -210,6 +212,8 @@ class Model extends BaseModel
         $realAttributes['_id'] = $attributes['_id'];
         $model = parent::newFromBuilder($realAttributes, $connection);
         $model->setTable($attributes['_index']);
+        $model->_score = $attributes['_score'];
+        $model->_highlight = $attributes['highlight'] ?? null;
         return $model;
     }
 
@@ -246,5 +250,13 @@ class Model extends BaseModel
         $ret = parent::performUpdate($query);
         $this->_performAction = false;
         return $ret;
+    }
+
+    public function toArray()
+    {
+        $data = parent::toArray();
+        $data['_score'] = $this->_score;
+        $data['_highlight'] = $this->_highlight;
+        return $data; 
     }
 }

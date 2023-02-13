@@ -111,6 +111,7 @@ class Grammar extends BaseGrammar
             'should'=>[]
         ];
 
+        $min_score = 0;
         foreach ($query->wheres as $where) {
             $method = "where{$where['type']}";
             if ($method === 'whereBasic') {
@@ -137,13 +138,21 @@ class Grammar extends BaseGrammar
                     case 'and_multimatch':
                         $conditions['must'][] = $expressions;
                         break;
+                    case 'or_multimatch':
+                        $conditions['should'][] = $expressions;
+                        break;
+                    case 'and_wildcard':
+                        $conditions['must'][] = $expressions;
+                        break;
+                    case 'or_wildcard':
+                        $conditions['should'][] = $expressions;
+                        break;
                     case 'and_null':
                         $conditions['must'][] = $expressions;
                         break;
                     case 'and_notnull':
                         $conditions['must_not'][] = $expressions;
                         break;
-
                     case 'or_null':
                         $conditions['should'][] = $expressions;
                         break;
@@ -165,8 +174,17 @@ class Grammar extends BaseGrammar
                     case 'and_nested':
                         $conditions['must'][] = $expressions;
                         break;
+                    case 'and_booleansub':
+                        $conditions['must'][] = $expressions;
+                        break;
+                    case 'or_booleansub':
+                        $conditions['should'][] = $expressions;
+                        break;
+                    case 'and_minscore':
+                        $min_score = $expressions['min_score'];
+                        break;
                     default:
-                    // dd($condition, $method, $expressions);
+                        // dd($condition, $method, $expressions);
                         $this->notSupport($method);
                         break;
                 }
@@ -177,7 +195,7 @@ class Grammar extends BaseGrammar
             if (count($conditions['must']) == 1) {
                 $conditions['must'] = $conditions['must'][0];
             }
-            return ['bool'=>$conditions];
+            return ['bool'=>$conditions, 'min_score' => $min_score];
         }
         return false;
     }
@@ -212,7 +230,6 @@ class Grammar extends BaseGrammar
     {
         $nested = $where['query'];
         return $this->compileWheres($nested);
-        // return $this;
     }
 
     /**
@@ -233,12 +250,36 @@ class Grammar extends BaseGrammar
         ];
     }
 
+    protected function whereWildcard(Builder $query, $where) {
+        $column = $where['column'] ?? $where['columns'];
+        return [
+            'wildcard' => [
+                $column => $where['value']
+            ]
+        ];
+    }
+
+    protected function whereMinScore(Builder $query, $where) {
+        return [
+            'min_score' => $where['value']
+        ];
+    }
+
     protected function whereBoolean(Builder $query, $where) {
         return [
             'term' => [
                 $where['column'] => $where['flag']
             ]
         ];
+    }
+
+    protected function whereBooleanSub(Builder $query, $where) {
+        $newQ = clone $query;
+        $newQ->wheres = $where['subs'];
+        $cond = $this->compileWheres($newQ);
+        unset($cond['bool']['must']);
+        unset($cond['bool']['must_not']);
+        return $cond;
     }
 
     /**
@@ -250,7 +291,8 @@ class Grammar extends BaseGrammar
      */
     protected function whereNull(Builder $query, $where)
     {
-        return ['exists' => [
+        return [
+            'exists' => [
                 'field' => $where['column']
             ]
         ];
