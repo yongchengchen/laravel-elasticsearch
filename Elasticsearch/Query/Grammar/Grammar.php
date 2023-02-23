@@ -245,7 +245,9 @@ class Grammar extends BaseGrammar
             'multi_match' => [
                 'query' => $where['value'],
                 $where['operator'] => $where['op_param'],
-                'fields' => $where['columns']
+                // 'fields' => $where['columns']
+                'type' => 'best_fields',
+                'lenient' => true,
             ]
         ];
     }
