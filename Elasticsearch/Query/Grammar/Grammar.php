@@ -241,14 +241,18 @@ class Grammar extends BaseGrammar
      * @return     array                               ( description_of_the_return_value )
      */
     protected function whereMultiMatch(Builder $query, $where) {
+        $data = [
+            'query' => $where['value'],
+            $where['operator'] => $where['op_param'],
+            // 'fields' => $where['columns']
+            'type' => 'best_fields',
+            'lenient' => true,
+        ];
+        if ($excludes = $where['excludes'] ?? false) {
+            $data['exclude'] = $excludes;
+        }
         return [
-            'multi_match' => [
-                'query' => $where['value'],
-                $where['operator'] => $where['op_param'],
-                // 'fields' => $where['columns']
-                'type' => 'best_fields',
-                'lenient' => true,
-            ]
+            'multi_match' => $data
         ];
     }
 

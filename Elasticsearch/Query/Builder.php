@@ -103,11 +103,12 @@ class Builder extends \Illuminate\Database\Query\Builder
      *
      * @param  array  $column
      * @param  string  $value
+     * @param  array  $value
      * @param  string  $boolean
      * @param  string  $operator  ('and', number for percentage)
      * @return $this
      */
-    public function whereMultiMatch(array $columns, $value, $operator='and', $boolean = 'and') 
+    public function whereMultiMatch(array $columns, $value, $excludes = null, $operator='and', $boolean = 'and') 
     {
         $type = 'MultiMatch';
         $op_param = $operator;
@@ -116,7 +117,7 @@ class Builder extends \Illuminate\Database\Query\Builder
         } else {
             $operator = 'operator';
         }
-        $this->wheres[] = compact('type', 'columns', 'operator', 'op_param', 'value', 'boolean');
+        $this->wheres[] = compact('type', 'columns', 'excludes', 'operator', 'op_param', 'value', 'boolean');
         $this->addBinding($value, 'where');
         return $this;
     }
