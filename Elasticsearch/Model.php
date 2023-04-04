@@ -17,6 +17,7 @@ class Model extends BaseModel
     protected $primaryKey = '_id';
     public $_score;
     public $_highlight;
+    public $_index;
 
     protected static $ORMModel;
 
@@ -214,6 +215,7 @@ class Model extends BaseModel
         $model->setTable($attributes['_index']);
         $model->_score = $attributes['_score'];
         $model->_highlight = $attributes['highlight'] ?? null;
+        $model->_index = $attributes['_index'];
         return $model;
     }
 
@@ -257,6 +259,7 @@ class Model extends BaseModel
         $data = parent::toArray();
         $data['_score'] = $this->_score;
         $data['_highlight'] = $this->_highlight;
+        $data['_index']= $this->_index;
         return $data; 
     }
 }
