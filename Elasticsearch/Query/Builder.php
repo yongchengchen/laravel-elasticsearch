@@ -344,5 +344,13 @@ class Builder extends \Illuminate\Database\Query\Builder
     public function getElsResponse() {
         return $this->processor->getResponse();
     }
+
+    public function deleteOneFromIndex($index, $id) {
+        if ($id) {
+            $type= '_doc';
+            $type= null;
+            return $this->connection->delete('', compact('index', 'type', 'id'));
+        }
+    }
 }
 

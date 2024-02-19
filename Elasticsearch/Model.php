@@ -13,11 +13,12 @@ use Illuminate\Database\Eloquent\Model as BaseModel;
 
 class Model extends BaseModel
 {
-    protected $connection = 'elasticsearch';
-    protected $primaryKey = '_id';
     public $_score;
     public $_highlight;
     public $_index;
+    protected $connection = 'elasticsearch';
+    protected $primaryKey = '_id';
+    protected $keyType = 'string';
 
     protected static $ORMModel;
 
@@ -261,5 +262,11 @@ class Model extends BaseModel
         $data['_highlight'] = $this->_highlight;
         $data['_index']= $this->_index;
         return $data; 
+    }
+
+    public function delete()
+    {
+        $id = $this->attributes['_id'];
+        $this->getQuery()->deleteOneFromIndex($this->getTable(), $id);
     }
 }
